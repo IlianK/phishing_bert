@@ -1,0 +1,247 @@
+/* Global Styles */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100vh;
+}
+
+header {
+    background-color: #0073e6;
+    padding: 10px;
+    width: 100%;
+    text-align: center;
+}
+
+header a {
+    color: white;
+    margin: 0 15px;
+    text-decoration: none;
+    font-size: 18px;
+}
+
+header a:hover {
+    text-decoration: underline;
+}
+
+main {
+    margin-top: 30px;
+}
+
+/* Info Box Styling */
+#info-box {
+    padding: 15px;
+    background-color: #f9f9f9;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    max-width: 900px;
+    width: 100%;
+    text-align: left;
+}
+
+/* Heading Styling */
+#info-box h3 {
+    font-size: 20px;
+    color: #0073e6;
+    margin-bottom: 10px; /* Added margin for spacing */
+}
+
+/* Instruction Header Styling */
+#info-box h4 {
+    font-size: 18px;
+    font-weight: bold;
+    color: #0073e6;
+    margin-top: 20px; /* Space between the previous paragraph */
+    margin-bottom: 10px; /* Space between header and list */
+}
+
+/* Instructions List Styling */
+#info-box ul {
+    padding-left: 20px; /* Indent the list */
+    font-size: 16px;
+    color: #555;
+    line-height: 1.6;
+}
+
+#info-box ul li {
+    margin-bottom: 8px; /* Add space between list items */
+    list-style-type: disc; /* Use bullet points */
+}
+
+/* Style the paragraph text */
+#info-box p {
+    font-size: 16px;
+    color: #555;
+    line-height: 1.6;
+}
+
+/* Continue Button Styling */
+#continue-btn {
+    padding: 10px 20px;
+    background-color: #0073e6;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s;
+}
+
+#continue-btn:hover {
+    background-color: #005bb5;
+}
+
+
+/* Info Icon and Check Button Styling */
+.info-icon {
+    display: inline-block;
+    position: relative;
+    font-size: 24px;
+    color: #0073e6;
+    cursor: pointer;
+    z-index: 100;
+    margin-left: 10px; /* Adds space between info icon and check button */
+}
+
+.info-circle {
+    display: inline-block;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #0073e6;
+    color: white;
+    font-size: 24px;
+    text-align: center;
+    line-height: 40px;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.3s ease;
+}
+
+.info-circle:hover {
+    background-color: #005bb5;
+}
+
+/* Style the email box */
+.email-box {
+    position: relative;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border: 1px solid #cccccc;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 900px;
+    margin-bottom: 20px;
+}
+
+/* Style the checkbox */
+#mark-legit {
+    position: absolute;
+    top: 40px;
+    right: 70px;
+    width: 25px;
+    height: 25px;
+    cursor: pointer;
+    accent-color: #4CAF50;
+}
+
+/* Style the label next to the checkbox */
+#mark-legit-label {
+    position: absolute;
+    top: 47px;
+    right: 25px;
+    font-size: 15px;
+    color: #333;
+}
+
+/* Results Placeholder Styling */
+#results-placeholder {
+    display: none;  /* Initially hidden */
+    width: 100%;
+    max-width: 900px;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border: 1px solid #cccccc;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
+}
+
+
+/* Navigation Buttons Styling */
+.nav-buttons {
+    display: flex;
+    justify-content: space-between; /* Space between left and right sections */
+    align-items: center; 
+    width: 100%; /* Ensure the buttons take full width */
+    margin-bottom: 20px;
+}
+
+.nav-buttons .left-buttons,
+.nav-buttons .right-buttons {
+    display: flex;
+    gap: 10px; /* Space between buttons within each group */
+}
+
+.nav-buttons button {
+    min-width: 100px;
+    padding: 10px;
+    background-color: #0073e6;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s;
+}
+
+.nav-buttons button:hover {
+    background-color: #005bb5;
+}
+
+.nav-buttons button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+/* Token Styles */
+.token {
+    display: inline-block;
+    padding: 4px 6px;
+    margin: 2px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.token:hover {
+    background-color: #e0e0e0;
+}
+
+.token.highlighted {
+    background-color: #ffeb3b;
+    color: #333;
+}
+
+#result-message {
+    font-size: 18px;
+    font-weight: bold;
+    margin-top: 20px;
+    text-align: center;
+}
+
+#result-message.green {
+    color: green;
+}
+
+#result-message.red {
+    color: red;
+}

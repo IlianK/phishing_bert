@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learn Phishing</title>
+    <link rel="icon" href="/static/images/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="/static/css/learn_phishing.css"> <!-- Link to learn_phishing.css -->
+    <script src="/static/js/learn_phishing.js" defer></script>
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="/">Analyze Email</a>
+            <a href="/learn_phishing">Test Yourself</a>
+        </nav>
+    </header>
+    <main>
+        <div id="learn-container">
+            <form id="email-form">
+                <!-- Info Box for Instructions (initially visible) -->
+                <div id="info-box" class="info-box-visible">
+                    <h3>Detect The Phishing Emails</h3>
+                    <p>
+                        The goal is to identify phishing emails based solely on the text content—not by the formatting or visual appearance. Phishing emails can often mimic legitimate ones by using professional-looking designs, so focus on recognizing suspicious words, phrases, or patterns in the subject and body of the email.
+                    </p>
+                    <h4>Instructions:</h4>
+                    <ul>
+                        <li>If the email seems legitimate, check the box to mark it as safe.</li>
+                        <li>If you suspect the email is phishing, look for suspicious words in the subject and body. Click on any words that stand out.</li>
+                        <li>After selecting suspicious words, click "Check" to see if your choices are correct.</li>
+                        <li>Use the "Previous" and "Next" buttons to navigate through the email samples.</li>
+                        <li>The emails have also been analyzed by a BERT model finetuned on phishing mails. After clicking 'Check' you will see what words the model identified as suspicious using XAI methods.</li>
+                        <li>Click "Continue" to view the sample emails.</li>
+                    </ul>
+                    <button type="button" id="continue-btn">Continue</button>
+                </div>
+
+                <div id="nav-buttons" class="nav-buttons" style="display:none;">
+                    <div class="left-buttons">
+                        <button type="button" id="prev-email">Previous</button>
+                        <button type="button" id="next-email">Next</button>
+                    </div>
+                    <div class="right-buttons">
+                        <button type="button" id="check-email" disabled>Check</button>
+                        <div id="info-icon" class="info-icon" style="display: none;">
+                            <span class="info-circle" title="Info">i</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Email content box with the subject and body (initially hidden) -->
+                <div id="email-content" style="display:none;">
+                    <div class="email-box">
+                        <!-- Checkbox and Label -->
+                        <input type="checkbox" id="mark-legit">
+                        <label for="mark-legit" id="mark-legit-label">Legit?</label>
+                    
+                        <!-- Email Subject and Body -->
+                        <h3 id="email-subject" class="tokenizable">[Subject]: <span></span></h3>
+                        <p id="email-body" class="tokenizable"></p>
+                    </div>
+
+                    <!-- Result Message Box (this will show whether the email is phishing or legit) -->
+                    <div id="result-message" style="display:none; font-size: 18px; font-weight: bold; margin-top: 20px;">
+                        <!-- The message will be dynamically updated (green for legit, red for phishing) -->
+                    </div>
+                </div>
+                
+                <!-- Results or highlighted words box beneath the main email box -->
+                <div id="results-placeholder" style="display: none;">
+                    <h3>Highlighted Words:</h3>
+                    <p id="highlighted-words-list">No words highlighted yet.</p>
+                </div>
+            </form>
+        </div>
+    </main>
+</body>
+</html>

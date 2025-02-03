@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Analysis</title>
+    <link rel="icon" href="/static/images/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="/static/css/index.css"> <!-- Link to index.css -->
+    <script src="/static/js/index.js" defer></script>
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="/">Analyze Email</a>
+            <a href="/learn_phishing">Test Yourself</a>
+        </nav>
+    </header>
+    <main>
+        <div id="main-container">
+            <form id="analysis-form">
+                <h2>Analyze Your Email</h2>
+                <input type="text" id="subject" placeholder="Email Subject">
+                <textarea id="body" placeholder="Email Body"></textarea>
+                <button type="button" id="analyze-btn">Analyze</button>
+            </form>
+            <div id="results-placeholder">
+                <h3>Results from BERT and XAI analysis:</h3>
+            </div>
+        </div>
+    </main>
+</body>
+</html>
