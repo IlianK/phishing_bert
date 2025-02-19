@@ -1,4 +1,5 @@
-venv
-temp
-models
-data
+venv/
+temp/
+models/
+data.zip
+data/

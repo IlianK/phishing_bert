@@ -17,14 +17,21 @@
     </header>
     <main>
         <div id="main-container">
+            
             <form id="analysis-form">
                 <h2>Analyze Your Email</h2>
                 <input type="text" id="subject" placeholder="Email Subject">
                 <textarea id="body" placeholder="Email Body"></textarea>
                 <button type="button" id="analyze-btn">Analyze</button>
             </form>
+            <div id="loading-spinner" style="display:none; text-align:center;">
+                <img src="/static/images/spinner.gif" alt="Loading" style="width:50px; height:auto;" />
+                <p>Processing... <span id="timer-counter">0</span> seconds</p>
+              </div>              
             <div id="results-placeholder">
                 <h3>Results from BERT and XAI analysis:</h3>
+                <p id="prediction-result"></p>
+                <div id="lime-visual"></div>
             </div>
         </div>
     </main>

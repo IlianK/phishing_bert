@@ -69,9 +69,8 @@ class CustomDataset(Dataset):
 
 
 # Load and preprocess data
-def load_data(structure, data_amount):
-    mail_csv = structure.data.preprocessed.data_for_bert.combined_for_bert_csv
-    mail_data = pd.read_csv(mail_csv)
+def load_data(csv_path, data_amount):
+    mail_data = pd.read_csv(csv_path)
     
     mail_data.dropna(subset=["text", "label"], inplace=True)
     mail_data['label'] = mail_data['label'].astype(int)
@@ -89,25 +88,18 @@ def load_data(structure, data_amount):
 
 
 # Split dataset
-def split_data(data, test_size=0.2, eval_size=0.2):
-    temp_data, test_data = train_test_split(
-        data,
-        test_size=test_size,  
-        stratify=data['label'],
-        random_state=42
-    )
+def split_data(data, eval_size=0.2):
     train_data, eval_data = train_test_split(
-        temp_data,
+        data,
         test_size=eval_size,
-        stratify=temp_data['label'], 
+        stratify=data['label'], 
         random_state=42
     )
 
     print(f"Training data size: {len(train_data)}")
     print(f"Evaluation data size: {len(eval_data)}")
-    print(f"Test data size: {len(test_data)}")
 
-    return train_data, eval_data, test_data
+    return train_data, eval_data
 
 
 # Preprocess and create dataloaders
@@ -115,7 +107,6 @@ def create_custom_datasets(train_data, eval_data, test_data, tokenizer, max_len=
     train_dataset = CustomDataset(train_data, tokenizer, max_len)
     eval_dataset = CustomDataset(eval_data, tokenizer, max_len)
     test_dataset = CustomDataset(test_data, tokenizer, max_len)
-
     return train_dataset, eval_dataset, test_dataset
 
 
