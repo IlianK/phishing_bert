@@ -1,66 +1,59 @@
 import os
-import types
+from pathlib import Path
+
+def _sanitize_for_attr(name: str) -> str:
+    return name.replace(".", "_").replace("-", "_")
+
+def _unsanitize_attr(attr: str) -> str:
+    return attr.replace("_", ".")
+
+class DotPath:
+    def __init__(self, path: Path):
+        self._path = path
+        self._contents_map = None
+    def __repr__(self):
+        return f"<DotPath folder={self._path}>"
+    def _scan(self):
+        if self._contents_map is not None:
+            return
+        self._contents_map = {}
+        if not self._path.is_dir():
+            return
+        for item in os.listdir(self._path):
+            real_name = item
+            item_path = self._path / real_name
+            attr_name = _sanitize_for_attr(real_name)
+            if item_path.is_dir():
+                self._contents_map[attr_name] = ("dir", real_name)
+            else:
+                self._contents_map[attr_name] = ("file", real_name)
+    def __getattr__(self, attr: str):
+        self._scan()
+        if not self._contents_map:
+            raise AttributeError(f"No items in folder: {self._path}")
+        entry = self._contents_map.get(attr)
+        if not entry:
+            raise AttributeError(f"'{attr}' not found under {self._path}.\nExisting items: {list(self._contents_map.keys())}")
+        typ, real_name = entry
+        real_path = self._path / real_name
+        if typ == "dir":
+            return DotPath(real_path)
+        else:
+            return str(real_path.resolve())
 
 class DynamicPathResolver:
-    def __init__(self, root=None, marker=None):
-        self.root = root or self._detect_project_root(marker)
+    def __init__(self, marker="README.md"):
+        self.root = self._find_marker_root(marker)
         print(f"Project Root: {self.root}")
-        self._generate_structure()
-
-    def _detect_project_root(self, marker=None):
-        current_dir = os.getcwd()
-        marker = marker or ".git"
-        while current_dir != os.path.dirname(current_dir):  
-            if marker in os.listdir(current_dir): 
-                return current_dir
-            current_dir = os.path.dirname(current_dir)
-        print(f"Warning: Marker '{marker}' not found. Using current working directory as root.")
-        return os.getcwd()
-
-    def _generate_structure(self):
-        def create_subtree(path):
-            subtree = types.SimpleNamespace()
-            for item in os.listdir(path):
-                item_path = os.path.join(path, item)
-                key = self._sanitize_name(item)
-                if os.path.isdir(item_path):
-                    setattr(subtree, key, create_subtree(item_path))
-                else:
-                    setattr(subtree, key, item_path)
-            return subtree
-        self.structure = create_subtree(self.root)
-
-    def _sanitize_name(self, name):
-        return name.replace(".", "_").replace("-", "_")
-
-    def __getattr__(self, item):
-        current = getattr(self.structure, item, None)
-        if current is None:
-            raise AttributeError(f"'DynamicPathResolver' object has no attribute '{item}'")
-        if isinstance(current, types.SimpleNamespace):
-            return self._get_directory_path(current)
-        return current
-
-    def _get_directory_path(self, subtree):
-        for key, value in subtree.__dict__.items():
-            if isinstance(value, str) and os.path.isdir(value):
-                return value
-            elif isinstance(value, types.SimpleNamespace):
-                return self._get_directory_path(value)
-        return self.root
-
-    def get_folder_path_from_namespace(self, namespace_obj):
-        if isinstance(namespace_obj, types.SimpleNamespace):
-            for key, value in namespace_obj.__dict__.items():
-                if isinstance(value, str) and os.path.isfile(value):
-                    return os.path.dirname(value)
-        return None
-
-def read_wordbag(file_path):
-    try:
-        with open(file_path, 'r') as file:
-            wordbag = [line.strip().lower() for line in file.readlines()]
-        return wordbag
-    except Exception as e:
-        print(f"Error reading file {file_path}: {e}")
-        return []
+        self.path = DotPath(self.root)
+    def _find_marker_root(self, marker: str) -> Path:
+        current = Path.cwd()
+        while True:
+            if (current / marker).exists():
+                return current
+            if current.parent == current:
+                print(f"Warning: Marker '{marker}' not found; using cwd: {Path.cwd()}")
+                return Path.cwd()
+            current = current.parent
+    def __repr__(self):
+        return f"<DynamicPathResolver root={self.root}>"

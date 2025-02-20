@@ -8,13 +8,12 @@ import os,sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from src.helper_functions.path_resolver import DynamicPathResolver
-
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 ################################################################################
 
 dpr = DynamicPathResolver(marker="README.md")
-output_dir = dpr.get_folder_path_from_namespace(dpr.structure.models.bert)
+output_dir = dpr.path.models.bert._path
 model_folder = os.path.join(output_dir, "checkpoint-175")
 
 explanations_json_path = os.path.join(

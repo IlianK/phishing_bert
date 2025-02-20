@@ -17,7 +17,6 @@ from transformers import DataCollatorWithPadding
 ##################################################################
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-from src.helper_functions.path_resolver import DynamicPathResolver
 from src.helper_functions.visualization import plot_roc_curve, plot_precision_recall, plot_confusion_matrix
 
 seed = 42
@@ -25,17 +24,6 @@ torch.manual_seed(seed)
 np.random.seed(seed)
 
 ##################################################################
-
-# Setup and paths
-def setup_paths():
-    resolver = DynamicPathResolver(marker="README.md")
-    structure = resolver.structure
-
-    output_dir = resolver.get_folder_path_from_namespace(structure.models.bert)
-    log_dir = os.path.join(output_dir, ".logs")
-    
-    return structure, output_dir, log_dir
-
 
 class CustomDataset(Dataset):
     def __init__(self, data, tokenizer, max_len=128):
