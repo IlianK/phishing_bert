@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Learn Phishing</title>
     <link rel="icon" href="/static/images/favicon.ico" type="image/x-icon">
-    <link rel="stylesheet" href="/static/css/learn_phishing.css"> <!-- Link to learn_phishing.css -->
+    <link rel="stylesheet" href="/static/css/learn_phishing.css">
     <script src="/static/js/learn_phishing.js" defer></script>
 </head>
 <body>
@@ -30,7 +30,7 @@
                         <li>If you suspect the email is phishing, look for suspicious words in the subject and body. Click on any words that stand out.</li>
                         <li>After selecting suspicious words, click "Check" to see if your choices are correct.</li>
                         <li>Use the "Previous" and "Next" buttons to navigate through the email samples.</li>
-                        <li>The emails have also been analyzed by a BERT model finetuned on phishing mails. After clicking 'Check' you will see what words the model identified as suspicious using XAI methods.</li>
+                        <li>The emails have also been analyzed by a BERT model finetuned on phishing mails. After clicking 'Check' you will see what words the model identified as suspicious using the XAI method LIME.</li>
                         <li>Click "Continue" to view the sample emails.</li>
                     </ul>
                     <button type="button" id="continue-btn">Continue</button>
@@ -67,10 +67,13 @@
                     </div>
                 </div>
                 
-                <!-- Results or highlighted words box beneath the main email box -->
+                <!-- Results box beneath the main email box -->
                 <div id="results-placeholder" style="display: none;">
                     <h3>Highlighted Words:</h3>
                     <p id="highlighted-words-list">No words highlighted yet.</p>
+                    
+                    <!-- Add an area for the LIME HTML -->
+                    <div id="lime-visual" style="margin-top: 30px;"></div>
                 </div>
             </form>
         </div>

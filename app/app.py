@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, json, request, jsonify, render_template
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import lime.lime_text
@@ -17,6 +17,17 @@ dpr = DynamicPathResolver(marker="README.md")
 output_dir = dpr.get_folder_path_from_namespace(dpr.structure.models.bert)
 model_folder = os.path.join(output_dir, "checkpoint-175")
 
+explanations_json_path = os.path.join(
+    os.getcwd(),
+    'app',
+    'static',
+    'json',
+    'lime_explanations.json'
+)
+with open(explanations_json_path, 'r', encoding='utf-8') as f:
+    explanations_data = json.load(f)
+
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 MAX_LEN = 128
 
@@ -31,14 +42,12 @@ emails_df = pd.read_csv(emails_path)
 
 app = Flask(__name__)
 
+# -------------------------------------------------------------------
+# Routes index.html
+# -------------------------------------------------------------------
 @app.route('/')
 def index():
     return render_template('index.html')
-
-
-@app.route('/learn_phishing')
-def learn_phishing():
-    return render_template('learn_phishing.html')
 
 
 @app.route("/analyze", methods=["POST"])
@@ -74,21 +83,46 @@ def analyze():
     })
 
 
+
+# -------------------------------------------------------------------
+# Routes for learn_phishing.html
+# -------------------------------------------------------------------
+@app.route('/learn_phishing')
+def learn_phishing():
+    return render_template('learn_phishing.html')
+
+
 @app.route('/get_email', methods=['POST'])
 def get_email():
-    email_index = request.json.get('email_index', 0)
-    if 0 <= email_index < len(emails_df):
-        email = emails_df.iloc[email_index].to_dict()
-        return jsonify(email)
+    req = request.get_json()
+    email_index = req.get('email_index', 0)
+    if 0 <= email_index < len(explanations_data):
+        entry = explanations_data[email_index]
+        return jsonify({
+            'subject': entry.get('original_subject', ''),
+            'body': entry.get('original_body', '')
+        })
     return jsonify({'error': 'Invalid email index'}), 400
 
 
 @app.route('/get_email_label', methods=['POST'])
 def get_email_label():
-    email_index = request.json.get('email_index', 0)
-    if 0 <= email_index < len(emails_df):
-        email_label = int(emails_df.iloc[email_index]['label'])
-        return jsonify({'label': email_label})
+    req = request.get_json()
+    email_index = req.get('email_index', 0)
+    if 0 <= email_index < len(explanations_data):
+        entry = explanations_data[email_index]
+        return jsonify({'label': entry.get('label', 0)})
     return jsonify({'error': 'Invalid email index'}), 400
+
+
+@app.route('/get_lime_html', methods=['POST'])
+def get_lime_html():
+    req = request.get_json()
+    email_index = req.get('email_index', 0)
+    if 0 <= email_index < len(explanations_data):
+        entry = explanations_data[email_index]
+        return jsonify({'lime_html': entry.get('lime_html', '')})
+    return jsonify({'error': 'Invalid email index'}), 400
+
 if __name__ == '__main__':
     app.run(debug=True)

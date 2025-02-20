@@ -1,101 +1,104 @@
+// learn_phishing.js
+
 let emailIndex = 0;   // Tracks the current email index
-let totalEmails = 15; // Total number of emails (set dynamically if needed)
+let totalEmails = 15; // Or fetch dynamically if needed
 
 // Fetch email and tokenize its content
-const fetchEmail = (index) => {
+function fetchEmail(index) {
+    // Clear any old LIME visual
+    document.getElementById('lime-visual').innerHTML = "";
+
+    // Hide results from the previous email
+    document.getElementById('results-placeholder').style.display = 'none';
+    document.getElementById('highlighted-words-list').textContent = 'No words highlighted yet.';
+    
+    // Clear any previous result message
+    const resultMessage = document.getElementById('result-message');
+    resultMessage.style.display = 'none';
+    resultMessage.textContent = '';
+
+    // Make sure the "Check" button is disabled until user makes a new choice
+    document.getElementById('check-email').disabled = true;
+
     fetch('/get_email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email_index: index })
     })
-        .then(response => response.json())
-        .then(data => {
-            const subjectContainer = document.getElementById('email-subject').querySelector('span');
-            const bodyContainer = document.getElementById('email-body');
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            console.error(data.error);
+            return;
+        }
 
-            // Tokenize the subject and body
-            subjectContainer.innerHTML = tokenize(data.subject);
-            bodyContainer.innerHTML = tokenize(data.body);
+        const subjectContainer = document
+          .getElementById('email-subject')
+          .querySelector('span');
+        const bodyContainer = document.getElementById('email-body');
 
-            // Reset the checkbox to unchecked
-            document.getElementById('mark-legit').checked = false;
+        // Tokenize the subject and body
+        subjectContainer.innerHTML = tokenize(data.subject);
+        bodyContainer.innerHTML = tokenize(data.body);
 
-            // Update navigation button states
-            updateNavigationButtons();
+        // Reset the checkbox
+        document.getElementById('mark-legit').checked = false;
 
-            // Re-check the "Check" button status (in case no tokens are selected initially)
-            updateCheckButtonState();
+        // Update nav button states and check-button state
+        updateNavigationButtons();
+        updateCheckButtonState();
+    })
+    .catch(error => console.error('Error fetching email:', error));
+}
 
-            document.getElementById('check-email').disabled = true; // Default disabled
-        })
-        .catch(error => console.error('Error fetching email:', error));
-};
 
 // Tokenize text into clickable words
-const tokenize = (text) => {
+function tokenize(text) {
     return text
         .split(' ')
         .map(word => `<span class="token">${word}</span>`)
         .join(' ');
-};
+}
 
-// Add a single event listener using event delegation
-const initializeEmailBoxClick = () => {
+// Event delegation for clickable tokens
+function initializeEmailBoxClick() {
     const emailBox = document.querySelector('.email-box');
-
-    // Ensure only token clicks are processed
     emailBox.addEventListener('click', (event) => {
         if (event.target.classList.contains('token')) {
             const checkbox = document.getElementById('mark-legit');
-            const checkButton = document.getElementById('check-email');
-
-            // If the checkbox is checked and a token is selected, uncheck the checkbox
+            // If user had checked legit, uncheck it if they highlight a token
             if (checkbox.checked) {
                 checkbox.checked = false;
             }
-
-            // Toggle the "highlighted" class for tokens
+            // Toggle highlight
             event.target.classList.toggle('highlighted');
-
-            // Update the "Check" button state
+            // Update "Check" button
             updateCheckButtonState();
         }
     });
-};
+}
 
-
-// Update the "Check" button's state based on highlighted tokens or checkbox state
-const updateCheckButtonState = () => {
-    const highlightedTokens = document.querySelectorAll('.token.highlighted'); // Get all highlighted tokens
+// Enable/disable "Check" button
+function updateCheckButtonState() {
+    const highlightedTokens = document.querySelectorAll('.token.highlighted');
     const checkButton = document.getElementById('check-email');
-    const checkbox = document.getElementById('mark-legit'); // Get the checkbox element
-
-    // Enable the "Check" button if there are highlighted tokens or the checkbox is checked
+    const checkbox = document.getElementById('mark-legit');
     checkButton.disabled = !(highlightedTokens.length > 0 || checkbox.checked);
-};
+}
 
-// Event listener to track changes to the checkbox state
+// On checkbox change
 document.getElementById('mark-legit').addEventListener('change', () => {
-    if (document.getElementById('mark-legit').checked) {
-        // Unhighlight all selected tokens when the checkbox is checked
+    const checkbox = document.getElementById('mark-legit');
+    if (checkbox.checked) {
+        // Unhighlight all tokens if the checkbox is set to legit
         document.querySelectorAll('.token.highlighted').forEach(token => {
             token.classList.remove('highlighted');
         });
     }
-    // Update the "Check" button state
     updateCheckButtonState();
 });
 
-// Update navigation buttons' states
-const updateNavigationButtons = () => {
-    const prevButton = document.getElementById('prev-email');
-    const nextButton = document.getElementById('next-email');
-
-    prevButton.disabled = emailIndex === 0;
-    nextButton.disabled = emailIndex >= totalEmails - 1;
-};
-
-// Navigation buttons
+// Next / Previous
 document.getElementById('prev-email').addEventListener('click', () => {
     if (emailIndex > 0) {
         emailIndex--;
@@ -110,85 +113,104 @@ document.getElementById('next-email').addEventListener('click', () => {
     }
 });
 
-// Check button
+function updateNavigationButtons() {
+    document.getElementById('prev-email').disabled = emailIndex === 0;
+    document.getElementById('next-email').disabled = emailIndex >= totalEmails - 1;
+}
+
+// "Check" button
 document.getElementById('check-email').addEventListener('click', () => {
-    const highlightedTokens = Array.from(
-        document.querySelectorAll('.token.highlighted')
-    ).map(token => token.textContent);
-
-    // Get the result message container
+    const highlightedTokens = Array.from(document.querySelectorAll('.token.highlighted'))
+                                  .map(token => token.textContent);
     const resultMessage = document.getElementById('result-message');
-
-    // Fetch the label from the email data (assuming it is returned in the response)
+    
+    // 1) Show if it's truly phishing or legit
     fetch('/get_email_label', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email_index: emailIndex }) // Send the current email index to get the label
+        body: JSON.stringify({ email_index: emailIndex })
     })
-        .then(response => response.json())
-        .then(data => {
-            const isPhishing = data.label === 1; // If the label is 1, it's phishing; else, it's legit
-            // Display the result message
-            resultMessage.style.display = 'block'; // Show the result message
-            if (isPhishing) {
-                resultMessage.textContent = 'This email is a phishing attempt.';
-                resultMessage.style.color = 'red';  // Set text color to red for phishing
-            } else {
-                resultMessage.textContent = 'This email is legit.';
-                resultMessage.style.color = 'green';  // Set text color to green for legit
-            }
-        })
-        .catch(error => console.error('Error fetching email label:', error));
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            console.error(data.error);
+            return;
+        }
+        const isPhishing = data.label === 1; // 1 = phishing
+        resultMessage.style.display = 'block';
+        if (isPhishing) {
+            resultMessage.textContent = 'This email is a phishing attempt.';
+            resultMessage.style.color = 'red';
+        } else {
+            resultMessage.textContent = 'This email is legit.';
+            resultMessage.style.color = 'green';
+        }
+    })
+    .catch(error => console.error('Error fetching email label:', error));
 
-    // Display highlighted tokens for debugging or later integration
+    // 2) Display highlighted tokens
     const resultsPlaceholder = document.getElementById('results-placeholder');
     const highlightedWordsList = document.getElementById('highlighted-words-list');
-
-    // Update the results list with the highlighted tokens
     if (highlightedTokens.length > 0) {
         highlightedWordsList.textContent = highlightedTokens.join(', ');
     } else {
         highlightedWordsList.textContent = 'No words highlighted yet.';
     }
-
-    // Make the results placeholder visible after showing the result message
     resultsPlaceholder.style.display = 'block';
+
+    // 3) Fetch the precomputed LIME HTML and embed it
+    fetch('/get_lime_html', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email_index: emailIndex })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            console.error(data.error);
+            return;
+        }
+        const limeVisual = document.getElementById('lime-visual');
+        limeVisual.innerHTML = ''; // Clear old
+        // Insert LIME HTML into an iframe
+        const iframe = document.createElement('iframe');
+        iframe.style.width = '100%';
+        iframe.style.height = '600px';
+        iframe.style.border = 'none';
+        iframe.srcdoc = data.lime_html;
+        limeVisual.appendChild(iframe);
+    })
+    .catch(error => console.error('Error fetching LIME HTML:', error));
 });
 
-
-
-// Continue button
-document.getElementById('continue-btn').addEventListener('click', function() {
-    // Hide the info box and show the email content and navigation buttons
+// "Continue" button
+document.getElementById('continue-btn').addEventListener('click', () => {
     document.getElementById('info-box').style.display = 'none';
     document.getElementById('email-content').style.display = 'block';
-    document.getElementById('nav-buttons').style.display = 'flex'; // Show the navigation buttons
-   // Make the info icon visible when the content is shown
-   document.getElementById('info-icon').style.display = 'inline-block';
+    document.getElementById('nav-buttons').style.display = 'flex';
+    document.getElementById('info-icon').style.display = 'inline-block';
 });
 
-// Info button
-document.getElementById('info-icon').addEventListener('click', function() {
-    // Toggle the info box visibility
+// Info icon
+document.getElementById('info-icon').addEventListener('click', () => {
     const infoBox = document.getElementById('info-box');
     const emailContent = document.getElementById('email-content');
     const navButtons = document.getElementById('nav-buttons');
-    const resultsPlaceholder = document.getElementById('results-placeholder'); // Get the results placeholder
+    const resultsPlaceholder = document.getElementById('results-placeholder');
 
     if (infoBox.style.display === 'none') {
-        infoBox.style.display = 'block';  // Show the info box
-        emailContent.style.display = 'none';  // Hide the email content
-        navButtons.style.display = 'none';  // Hide the navigation buttons
-        resultsPlaceholder.style.display = 'none';  // Hide the results placeholder
+        infoBox.style.display = 'block';
+        emailContent.style.display = 'none';
+        navButtons.style.display = 'none';
+        resultsPlaceholder.style.display = 'none';
     } else {
-        infoBox.style.display = 'none';  // Hide the info box
-        emailContent.style.display = 'block';  // Show the email content
-        navButtons.style.display = 'flex';  // Show the navigation buttons
+        infoBox.style.display = 'none';
+        emailContent.style.display = 'block';
+        navButtons.style.display = 'flex';
     }
 });
 
-// Initial fetch
+// On page load, fetch first email
 fetchEmail(emailIndex);
-
-// Initialize event delegation for clickable tokens
+// Initialize event delegation for tokens
 initializeEmailBoxClick();
