@@ -2,3 +2,5 @@ venv/
 temp/
 models/
 data.zip
+src/helper_functions/__pycache__/
+src/model_training/__pycache__/
