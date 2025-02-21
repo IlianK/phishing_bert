@@ -14,6 +14,7 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import VotingClassifier
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from nltk.corpus import stopwords
 import nltk
@@ -39,7 +40,14 @@ def load_preprocessed_data(train_load_path, test_load_path):
     return df_train, df_test
 
 
-# Load trained model
+# Save model
+def save_model(model, models_folder, model_name):
+    model_path = os.path.join(models_folder, f"{model_name.replace(' ', '_').lower()}.pkl")
+    joblib.dump(model, model_path)
+    print(f"Model saved: {model_path}")
+
+
+# Load model
 def load_model(models_folder, model_name):
     model_path = os.path.join(models_folder, f"{model_name.replace(' ', '_').lower()}.pkl")
     return joblib.load(model_path)
@@ -65,7 +73,7 @@ def train_and_save_model(model, param_grid, X_train, y_train, model_name, models
     grid_search.fit(X_train, y_train)
 
     best_model = grid_search.best_estimator_
-    joblib.dump(best_model, os.path.join(models_folder, f"{model_name}.pkl"))
+    save_model(best_model, models_folder, model_name)
 
     print(f"Best {model_name} params:", grid_search.best_params_)
     return best_model
@@ -107,3 +115,25 @@ def evaluate_model(model_name, test_file, models_folder):
     plt.ylabel("Actual")
     plt.title(f"Confusion Matrix - {model_name}")
     plt.show()
+
+
+# Load all models
+def load_all_models(models_folder, model_names):
+    models = [(name, load_model(models_folder, name)) for name in model_names]
+    return models
+
+
+# Ensemble model
+def create_and_train_ensemble(models_folder, model_names):
+    models = {name: load_model(models_folder, name) for name in model_names}
+
+    voting_clf = VotingClassifier(
+        estimators=[
+            ('naive_bayes', models['naive_bayes']),
+            ('decision_tree', models['decision_tree']),
+            ('random_forest', models['random_forest'])
+        ],
+        voting='hard'
+    )
+
+    return voting_clf

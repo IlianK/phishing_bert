@@ -1,43 +1,30 @@
 from flask import Flask, json, request, jsonify, render_template
-import torch
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
-import lime.lime_text
-import numpy as np
+import os
+import sys
 import pandas as pd
-import os,sys
+import torch
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from src.helper_functions.path_resolver import DynamicPathResolver
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from src.XAI import explain_bert
 
-################################################################################
+# -------------------------------------------------------------------
+# Paths & Models
+# -------------------------------------------------------------------
 
 dpr = DynamicPathResolver(marker="README.md")
 output_dir = dpr.path.models.bert._path
 model_folder = os.path.join(output_dir, "checkpoint-2500")
 
-explanations_json_path = os.path.join(
-    os.getcwd(),
-    'app',
-    'static',
-    'json',
-    'lime_explanations.json'
-)
-with open(explanations_json_path, 'r', encoding='utf-8') as f:
-    explanations_data = json.load(f)
-
+explanations_json_path = dpr.path.app.static.json.lime_explanations_json
+emails_path = dpr.path.app.static.csv.emails_csv
+emails_df = pd.read_csv(emails_path)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-MAX_LEN = 128
+tokenizer, model = explain_bert.load_model(model_folder, device)
+explanations_data = explain_bert.load_explanations(explanations_json_path)
 
-tokenizer = AutoTokenizer.from_pretrained(model_folder)
-model = AutoModelForSequenceClassification.from_pretrained(model_folder)
-model.eval()
-
-################################################################################
-
-emails_path = os.path.join(os.getcwd(), 'app', 'static', 'csv', 'emails.csv')
-emails_df = pd.read_csv(emails_path)
+# -------------------------------------------------------------------
 
 app = Flask(__name__)
 
@@ -58,33 +45,19 @@ def analyze():
     if not subject and not body:
         return jsonify({"error": "Both subject and body cannot be empty."}), 400
 
-    combined_text = subject + " " + body
+    combined_text = subject + " [SEP] " + body
 
-    inputs = tokenizer(combined_text, return_tensors="pt", truncation=True, padding=True, max_length=512)
-    with torch.no_grad():
-        outputs = model(**inputs)
-        probs = torch.nn.functional.softmax(outputs.logits, dim=-1)
-        confidence, predicted_label_idx = torch.max(probs, dim=-1)
-    
-    predicted_label = "Phishing" if predicted_label_idx.item() == 1 else "Legit"
+    # Predict Label
+    predicted_label, confidence = explain_bert.predict_label(combined_text, tokenizer, model)
 
     # LIME Explanation
-    explainer = lime.lime_text.LimeTextExplainer(class_names=["Legit", "Phishing"])
-    def predict_proba(texts):
-        tokens = tokenizer(texts, return_tensors="pt", truncation=True, padding=True, max_length=512)
-        with torch.no_grad():
-            logits = model(**tokens).logits
-        return torch.nn.functional.softmax(logits, dim=-1).cpu().numpy()
-
-    exp = explainer.explain_instance(combined_text, predict_proba, num_features=10)
-    lime_html = exp.as_html()
+    lime_html = explain_bert.explain_prediction(combined_text, tokenizer, model)
 
     return jsonify({
         "predicted_label": predicted_label,
-        "confidence": confidence.item(),
+        "confidence": confidence,
         "lime_html": lime_html
     })
-
 
 
 # -------------------------------------------------------------------
@@ -126,6 +99,7 @@ def get_lime_html():
         entry = explanations_data[email_index]
         return jsonify({'lime_html': entry.get('lime_html', '')})
     return jsonify({'error': 'Invalid email index'}), 400
+
 
 if __name__ == '__main__':
     app.run(debug=True)

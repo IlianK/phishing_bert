@@ -1,33 +1,42 @@
 import os
 import pandas as pd
-import torch, evaluate
-from torch.utils.data import Dataset
 import torch
-from transformers import AutoTokenizer, AutoModelForSequenceClassification, Trainer, TrainingArguments
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, precision_score, recall_score
 import numpy as np
-import sys
-from transformers import TrainerCallback
+import random
+import joblib
+from torch.utils.data import Dataset, DataLoader
+from transformers import (
+    AutoTokenizer,
+    AutoModelForSequenceClassification,
+    Trainer,
+    TrainingArguments,
+    DataCollatorWithPadding,
+    TrainerCallback
+)
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, precision_score, recall_score, confusion_matrix
 from copy import deepcopy
-from tqdm import tqdm 
-from torch.utils.data import DataLoader
-from transformers import DataCollatorWithPadding
+from tqdm import tqdm
+
+import sys, os
+sys.path.append(os.path.abspath('../../src'))
+from helper_functions import visualization as visual
 
 ##################################################################
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-from src.helper_functions.visualization import plot_roc_curve, plot_precision_recall, plot_confusion_matrix
 
-seed = 42
-torch.manual_seed(seed)
-np.random.seed(seed)
+# Seed
+def set_seed(seed=42):
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
 
-##################################################################
 
+# Custom Dataset Class
 class CustomDataset(Dataset):
     def __init__(self, data, tokenizer, max_len=128):
-        self.data = data  # pandas DataFrame with 'text' and 'label'
+        self.data = data
         self.tokenizer = tokenizer
         self.max_len = max_len
 
@@ -35,47 +44,52 @@ class CustomDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        # Get the text and label
         text = str(self.data.iloc[idx]["text"])
         label = self.data.iloc[idx]["label"]
 
-        # Tokenize the text
         encoding = self.tokenizer(
             text,
             truncation=True,
-            padding='max_length',  # Or 'longest' if you prefer dynamic padding
+            padding='max_length',
             max_length=self.max_len,
             return_tensors="pt"
         )
 
-        # We squeeze to remove the unnecessary extra dimensions
         return {
-            "input_ids": encoding["input_ids"].squeeze(0),  # (1, max_len) -> (max_len,)
-            "attention_mask": encoding["attention_mask"].squeeze(0),  # (1, max_len) -> (max_len,)
+            "input_ids": encoding["input_ids"].squeeze(0),
+            "attention_mask": encoding["attention_mask"].squeeze(0),
             "labels": torch.tensor(label, dtype=torch.long)
         }
 
 
 # Load and preprocess data
-def load_data(csv_path, data_amount):
-    mail_data = pd.read_csv(csv_path)
-    
-    mail_data.dropna(subset=["text", "label"], inplace=True)
-    mail_data['label'] = mail_data['label'].astype(int)
-    mail_data = mail_data.groupby('label', group_keys=False).apply(
-        lambda x: x.sample(
-            int(np.rint(len(x) / len(mail_data) * data_amount)), 
-            random_state=42
-        )
-    ).reset_index(drop=True)
-    
-    print("\n=== Updated Class Distribution ===")
-    print(mail_data['label'].value_counts(), "\n")
+def load_data(train_csv, test_csv, data_amount=None):
+    train_data = pd.read_csv(train_csv)
+    test_data = pd.read_csv(test_csv)
 
-    return mail_data
+    train_data.dropna(subset=["text", "label"], inplace=True)
+    train_data['label'] = train_data['label'].astype(int)
+    test_data.dropna(subset=["text", "label"], inplace=True)
+    test_data['label'] = test_data['label'].astype(int)
+
+    if data_amount:
+        train_data = train_data.groupby('label', group_keys=False).apply(
+            lambda x: x.sample(
+                int(np.rint(len(x) / len(train_data) * data_amount)), 
+                random_state=42
+            )
+        ).reset_index(drop=True)
+
+    print("\n=== Updated Class Distribution (Train) ===")
+    print(train_data['label'].value_counts(), "\n")
+
+    print("\n=== Updated Class Distribution (Test) ===")
+    print(test_data['label'].value_counts(), "\n")
+
+    return train_data, test_data
 
 
-# Split dataset
+# Split dataset 
 def split_data(data, eval_size=0.2):
     train_data, eval_data = train_test_split(
         data,
@@ -90,7 +104,7 @@ def split_data(data, eval_size=0.2):
     return train_data, eval_data
 
 
-# Preprocess and create dataloaders
+# Get datasets
 def create_custom_datasets(train_data, eval_data, test_data, tokenizer, max_len=128):
     train_dataset = CustomDataset(train_data, tokenizer, max_len)
     eval_dataset = CustomDataset(eval_data, tokenizer, max_len)
@@ -109,7 +123,7 @@ def create_model_and_tokenizer(bert_type, special_tokens, device):
         num_labels=2,
         id2label=id2label,
         label2id=label2id
-        ).to(device)
+    ).to(device)
 
     if special_tokens:
         tokenizer.add_tokens(special_tokens)
@@ -148,7 +162,8 @@ class CustomCallback(TrainerCallback):
 
 
 # Trainer
-def train_evaluate(model, tokenizer, train_dataset, eval_dataset, config, data_collator, output_dir, log_dir):
+def train_model(model, tokenizer, train_dataset, eval_dataset, config, output_dir, log_dir):
+    data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
     training_args = TrainingArguments(
         output_dir=output_dir,
@@ -180,24 +195,17 @@ def train_evaluate(model, tokenizer, train_dataset, eval_dataset, config, data_c
     trainer.add_callback(CustomCallback(trainer))
     trainer.train()
     trainer.evaluate()
+    
+    return trainer, data_collator
 
-    return trainer
 
+# Evaluate model
+def evaluate_model(model, test_dataset, data_collator, batch_size, device):
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, collate_fn=data_collator)
+    model.eval()
 
-# Evaluate on test set
-def evaluate_on_test(model, test_data, data_collator, batch_size, device):
-    test_loader = DataLoader(
-        test_data, 
-        batch_size, 
-        collate_fn=data_collator
-        )
-
-    model.eval()  
-    true_labels = []
-    predicted_labels = []
-    probs = []
-
-    with torch.no_grad(): 
+    true_labels, predicted_labels, probs = [], [], []
+    with torch.no_grad():
         for batch in test_loader:
             input_ids = batch["input_ids"].to(device)
             attention_mask = batch["attention_mask"].to(device)
@@ -215,6 +223,7 @@ def evaluate_on_test(model, test_data, data_collator, batch_size, device):
     return true_labels, predicted_labels, probs
 
 
+# Inference
 def inference(model, texts, true_labels, tokenizer, max_length, device):
     encoded_inputs = tokenizer(
         texts,
