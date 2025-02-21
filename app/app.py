@@ -14,7 +14,7 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 dpr = DynamicPathResolver(marker="README.md")
 output_dir = dpr.path.models.bert._path
-model_folder = os.path.join(output_dir, "checkpoint-175")
+model_folder = os.path.join(output_dir, "checkpoint-2500")
 
 explanations_json_path = os.path.join(
     os.getcwd(),
@@ -52,8 +52,12 @@ def index():
 @app.route("/analyze", methods=["POST"])
 def analyze():
     data = request.get_json()
-    subject = data.get("subject", "")
-    body = data.get("body", "")
+    subject = data.get("subject", "").strip()
+    body = data.get("body", "").strip()
+
+    if not subject and not body:
+        return jsonify({"error": "Both subject and body cannot be empty."}), 400
+
     combined_text = subject + " " + body
 
     inputs = tokenizer(combined_text, return_tensors="pt", truncation=True, padding=True, max_length=512)
